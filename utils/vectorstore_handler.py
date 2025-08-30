@@ -1,4 +1,5 @@
 import os
+import asyncio
 
 from utils.config import GOOGLE_API_KEY, MODEL_OPTIONS
 from utils.pdf_handler import get_pdf_text, get_text_chunks
@@ -51,6 +52,14 @@ def get_or_create_vectorstore(uploaded_files, model_provider):
   Returns:
     Chroma: A Chroma vectorstore containing embedded PDF text chunks.
   """
+  
+  try:
+    asyncio.get_running_loop()
+  except RuntimeError:
+    loop = asyncio
+    asyncio.set_event_loop(loop)
+    
+    
   # Extract raw text from the uploaded PDF files
   raw_text = get_pdf_text(uploaded_files)
 
