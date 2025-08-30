@@ -19,7 +19,7 @@ from utils.llm_handler import get_llm_chain
 
 def main():
   """
-  Main entry point for the RAG PDFBot Streamlit app.
+  Main entry point for the Masterthesis Literature Chatbot Streamlit app.
 
   This function:
   - Sets up the page configuration
@@ -28,8 +28,8 @@ def main():
   - Renders chat interface and handles user questions
   - Allows downloading chat history
   """
-  st.set_page_config(page_title="RAG PDFBot", layout="centered")
-  st.title("👽 RAG PDFBot")
+  st.set_page_config(page_title="Masterthesis Literature Chatbot", layout="centered")
+  st.title("Masterthesis Literature Chatbot")
   st.caption("Chat with multiple PDFs :books:")
 
   # Initialize required Streamlit session state variables

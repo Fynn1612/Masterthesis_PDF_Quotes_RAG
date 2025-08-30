@@ -29,7 +29,7 @@ def get_llm_chain(model_provider, model, vectorstore):
   """
   # Define prompt template with system and user message format
   prompt = ChatPromptTemplate.from_messages([
-    ("system", "Answer as detailed as possible using the context below. If unknown, say 'I don't know.'"),
+    ("system", "Answer as detailed as possible using the context below. Always provide the source of the information (filename + page (if available)). If unknown, say 'I don't know.'"),
     ("human", "Context:\n{context}\n\n\nQuestion:\n{input}")
   ])
 
