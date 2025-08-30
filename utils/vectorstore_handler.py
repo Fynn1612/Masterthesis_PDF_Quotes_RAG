@@ -8,12 +8,23 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-# Mapping each model provider to its corresponding persistent directory for storing vectorstore data
-PERSIST_DIR = {
-    key.lower(): f"./data/{key.lower()}_vector_store.chroma"
-    for key in MODEL_OPTIONS.keys()
-}
+PROJECT_NAME = "Masterarbeit_RAG_PDFs"
 
+GOOGLE_DRIVE_BASE = r"G:\Meine Ablage"
+
+# Mapping each model provider to its corresponding persistent directory for storing vectorstore data
+# PERSIST_DIR = {
+#     key.lower(): f"./data/{key.lower()}_vector_store.chroma"
+#     for key in MODEL_OPTIONS.keys()
+# }
+
+PERSIST_DIR = {
+  key.lower(): os.path.join(
+    GOOGLE_DRIVE_BASE, PROJECT_NAME, "Vectorsores", key.lower(), "chroma_db"
+    
+  )
+  for key in MODEL_OPTIONS.keys()
+}
 
 def get_embeddings(model_provider):
     """
@@ -61,28 +72,37 @@ def get_or_create_vectorstore(uploaded_files, model_provider):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    # Extract raw text from the uploaded PDF files
-    raw_text = get_pdf_text(uploaded_files)
+    # Extract raw text from the uploaded PDF files with metadata
+    raw_text_with_metadata = get_pdf_text(uploaded_files)
 
-    # Chunk the raw text for embedding (e.g., 5000 characters with overlap)
-    chunks = get_text_chunks(raw_text)
+    # Chunk the raw text for embedding (e.g., 5000 characters with overlap) with metadata
+    chunks = get_text_chunks(raw_text_with_metadata)
 
     # Load the appropriate embedding model
     embedding = get_embeddings(model_provider)
 
     # Define directory path to store or retrieve Chroma DB
     persist_path = PERSIST_DIR[model_provider]
+    os.makedirs(persist_path, exist_ok=True)
 
     # If the vectorstore directory exists and is not empty, load and append new chunks
     if os.path.exists(persist_path) and os.listdir(persist_path):
         vectorstore = Chroma(
             persist_directory=persist_path, embedding_function=embedding
         )
-        vectorstore.add_texts(chunks)
+        vectorstore.add_texts(
+            texts=[c["text"] for c in chunks],
+            metadatas=[c["metadata"] for c in chunks]
+        )
+        vectorstore.persist()
     else:
         # Otherwise, create a new vectorstore from the chunks
         vectorstore = Chroma.from_texts(
-            texts=chunks, embedding=embedding, persist_directory=persist_path
+            texts=[c["text"] for c in chunks],
+            embedding=embedding,
+            metadatas=[c["metadata"] for c in chunks],
+            persist_directory=persist_path
         )
+        vectorstore.persist()
 
     return vectorstore
