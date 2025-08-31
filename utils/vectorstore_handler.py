@@ -42,6 +42,29 @@ def get_embeddings(model_provider):
     else:
         raise ValueError("Unsupported Model Provider")
 
+def get_files_from_folder():
+    """
+    Simulates file upload by reading all PDF files from a specified Google Drive folder.
+    
+    This function:
+    - Reads all PDF files from the specified Google Drive folder.
+    - Simulates the file upload process by returning file-like objects.
+
+    Returns:
+    list: A list of file-like objects representing the uploaded PDF files.
+    """
+    
+    folder_path = os.path.join(GOOGLE_DRIVE_BASE, PROJECT_NAME, "PDFs")
+    uploaded_files = []
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith(".pdf"):
+            file_path = os.path.join(folder_path, filename)
+            f = open(file_path, "rb")
+            #f.name = filename  # Simulate the 'name' attribute of uploaded files
+            uploaded_files.append(f) 
+                           
+    return uploaded_files
+    
 
 def get_or_create_vectorstore(uploaded_files, model_provider):
     """
@@ -85,10 +108,12 @@ def get_or_create_vectorstore(uploaded_files, model_provider):
         vectorstore = Chroma(
             persist_directory=persist_path, embedding_function=embedding
         )
+               
         vectorstore.add_texts(
             texts=[c["text"] for c in chunks],
             metadatas=[c["metadata"] for c in chunks]
         )
+       
         vectorstore.persist()
     else:
         # Otherwise, create a new vectorstore from the chunks

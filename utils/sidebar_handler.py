@@ -12,7 +12,7 @@ Handles all components within the sidebar such as:
 import streamlit as st
 
 from utils.config import MODEL_OPTIONS
-from utils.vectorstore_handler import get_or_create_vectorstore
+from utils.vectorstore_handler import get_or_create_vectorstore, get_files_from_folder
 
 
 def render_model_selector():
@@ -76,7 +76,10 @@ def sidebar_file_upload(model_provider):
   Parameters:
   - model_provider (str): Selected model provider
   """
-  uploaded_files, submitted = render_upload_files_button()
+  uploaded_files, submitted = get_files_from_folder(), True #render_upload_files_button()
+  print(f"Length of uploaded files: {len(uploaded_files)}")
+  print(f" Content of uploaded files: {uploaded_files}")
+  print(f" Type of uploaded files: {type(uploaded_files)}")
 
   if submitted:
     if uploaded_files:

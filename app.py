@@ -49,13 +49,13 @@ def main():
     # Utility buttons: reset, clear, undo
     sidebar_utilities()
 
-  # Show message if no files are uploaded yet
-  if not st.session_state.get(f"uploaded_files_{st.session_state.uploader_key}", []):
-    st.info("📄 Please upload and submit PDFs to start chatting.")
+  # # Show message if no files are uploaded yet
+  # if not st.session_state.get(f"uploaded_files_{st.session_state.uploader_key}", []):
+  #   st.info("📄 Please upload and submit PDFs to start chatting.")
 
-  # Warn if new PDFs are uploaded but not submitted
-  if st.session_state.get("unsubmitted_files", False):
-    st.warning("📄 New PDFs uploaded. Please submit before chatting.")
+  # # Warn if new PDFs are uploaded but not submitted
+  # if st.session_state.get("unsubmitted_files", False):
+  #   st.warning("📄 New PDFs uploaded. Please submit before chatting.")
 
   # Show uploaded files summary
   if st.session_state.get("vector_store", None) and st.session_state.get("pdf_files", []):
@@ -64,10 +64,10 @@ def main():
   # Render previous chat messages (Q&A)
   if st.session_state.get("chat_history", []):
     render_chat_history()
-
+  #st.write(st.session_state)
   # Show chat input box and process question with selected LLM
-  if st.session_state.get("vector_store"):
-    handle_user_input(model_provider, model, get_llm_chain(model_provider, model, st.session_state.get("vector_store")))
+  #st.session_state.get("vector_store"):
+  handle_user_input(model_provider, model, get_llm_chain(model_provider, model, st.session_state.get("vector_store")))
 
   # Developer mode: inspect Chroma vectorstore
   if st.session_state.vector_store:
