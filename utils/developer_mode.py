@@ -21,6 +21,12 @@ def inspect_vectorstore(vectorstore):
     try:
       doc_count = vectorstore._collection.count()
       st.success(f"🔎 {doc_count} documents stored in ChromaDB.")
+      docs = vectorstore.get(include=["metadatas", "documents"])
+      for i, (docs, meta) in enumerate(zip(docs["documents"], docs["metadatas"])):
+        st.markdown(f"**Eintrag {i + 1}:**")
+        st.markdown(f"- Quelle: {meta.get('source')}, Seite: {meta.get('page')}")
+        st.markdown(f"- Textauszug: {docs[:100]} ...")
+        st.markdown("---")
     except Exception as e:
       st.error("⚠️ Could not fetch document count.")
       st.code(str(e))

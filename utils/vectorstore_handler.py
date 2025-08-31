@@ -13,11 +13,6 @@ PROJECT_NAME = "Masterarbeit_RAG_PDFs"
 GOOGLE_DRIVE_BASE = r"G:\Meine Ablage"
 
 # Mapping each model provider to its corresponding persistent directory for storing vectorstore data
-# PERSIST_DIR = {
-#     key.lower(): f"./data/{key.lower()}_vector_store.chroma"
-#     for key in MODEL_OPTIONS.keys()
-# }
-
 PERSIST_DIR = {
   key.lower(): os.path.join(
     GOOGLE_DRIVE_BASE, PROJECT_NAME, "Vectorsores", key.lower(), "chroma_db"
@@ -53,8 +48,8 @@ def get_or_create_vectorstore(uploaded_files, model_provider):
     Loads an existing Chroma vectorstore from disk if it exists, or creates a new one from uploaded PDFs.
 
     This function:
-    - Extracts raw text from uploaded PDFs.
-    - Splits the text into chunks suitable for embedding.
+    - Extracts raw text and metadata from uploaded PDFs.
+    - Splits the text into chunks suitable for embedding while keeping metadata.
     - Loads or creates a vectorstore for the given model provider.
     - Appends to existing vectorstore if already present.
 
