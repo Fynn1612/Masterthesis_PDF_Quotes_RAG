@@ -45,7 +45,7 @@ def get_llm_chain(model_provider, model, vectorstore):
     llm = ChatGoogleGenerativeAI(model=model, api_key=GOOGLE_API_KEY)
   else:
     return None
-    # raise ValueError("Unsupported Model Provider")
+    #raise ValueError("Unsupported Model Provider")
 
   # Convert vectorstore into a retriever, pulling top 3 relevant chunks
   retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
