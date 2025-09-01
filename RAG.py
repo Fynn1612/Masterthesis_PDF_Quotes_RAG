@@ -80,7 +80,9 @@ def load_pdf():
             for pdf in new_pdfs:
                 print(f"Loading new PDF: {pdf}")
                 pdf_loader = UnstructuredPDFLoader(
-                    file_path=os.path.join(PDF_FOLDER, pdf)
+                    file_path=os.path.join(PDF_FOLDER, pdf),
+                    mode = "elements",
+                    unstructured_kwargs={"strategy": "fast"},
                 )
                 document = pdf_loader.load()
                 documents.append(document)
