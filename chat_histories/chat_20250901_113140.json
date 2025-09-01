@@ -1,0 +1,6 @@
+[
+  {
+    "question": "What is epistemic uncertainty",
+    "answer": "Epistemic uncertainty refers to uncertainty arising in areas of the data distribution where there is little to no data, or due to data scarcity. When a sample falls into such an area, the model makes a prediction without having seen similar data. It is considered a component of total uncertainty.\n\nSource:\n*   `A Structured Review of Literature on Uncertainty in Machine.pdf`\n*   `A Structured Review of Literature on Uncertainty in Machine.pdf`"
+  }
+]

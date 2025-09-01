@@ -1,0 +1,6 @@
+[
+  {
+    "question": "What is epistemic uncertainty. provide sources",
+    "answer": "Epistemic uncertainty is a component of total uncertainty, combined with aleatoric uncertainty [A Structured Review of Literature on Uncertainty in Machine.pdf, page 1]. It refers to the case where both positive and negative classes appear plausible, and is caused by a lack of knowledge [How to measure uncertainty in uncertainty sampling.pdf, page 104]. This type of uncertainty is considered the reducible part of the total uncertainty [How to measure uncertainty in uncertainty sampling.pdf, page 104].\n\nAreas with high epistemic uncertainty are characterized by having little to no data, leading the model to make predictions without having encountered similar data [A Structured Review of Literature on Uncertainty in Machine.pdf, page 2]. In Bayesian deep learning, epistemic uncertainty is modeled by applying a prior distribution over a model's weights to capture their variation given data [What Uncertainties Do We Need in Bayesian Deep Learning for Copmuter Vision.pdf, page 2]. It's also noted that the concepts of aleatoric and epistemic uncertainty are unambiguous within a model's framework, and what is considered aleatoric in one model may be epistemic in another [A Structured Review of Literature on Uncertainty in Machine.pdf, page 2]."
+  }
+]
