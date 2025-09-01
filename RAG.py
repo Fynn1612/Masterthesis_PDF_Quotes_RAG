@@ -1,4 +1,4 @@
-from pydoc import doc
+#from pydoc import doc
 from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -11,17 +11,15 @@ import os
 
 from utils.config import GOOGLE_API_KEY, GROQ_API_KEY
 
-from langchain.prompts import ChatPromptTemplate
 #from langchain.chains import create_retrieval_chain
 #from langchain.chains.combine_documents import create_stuff_documents_chain
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 #from langchain_groq import ChatGroq
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-import traceback
 import streamlit as st
 
-from meta_data_handling import get_pdf_metadata, load_stored_metadata, save_metadata
+from utils.meta_data_handling import get_pdf_metadata, load_stored_metadata, save_metadata
 
 PDF_FOLDER = "G:/Meine Ablage/Masterarbeit_RAG_PDFs/PDFs"
 METADATA_PATH = "G:/Meine Ablage/Masterarbeit_RAG_PDFs/pdf_metadata.json"
