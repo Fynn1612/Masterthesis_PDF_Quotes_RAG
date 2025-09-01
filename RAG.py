@@ -181,17 +181,6 @@ def main():
     st.title("Masterthesis Literature Chatbot")
     st.caption("Chat with multiple PDFs :books:")
     
-    # Initialize required Streamlit session state variables
-    setup_session_state()
-    
-    # Allow user to download the chat history as CSV
-    if st.session_state.chat_history:
-        render_download_chat_history()
-        
-    # Render previous chat messages (Q&A)
-    if st.session_state.get("chat_history", []):
-        render_chat_history()
-
     # Load new or updated PDFs
     changes, current_metadata, documents = load_pdf()
     if not documents:
