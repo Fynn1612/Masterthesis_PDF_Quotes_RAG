@@ -2,6 +2,7 @@ import streamlit as st
 import os
 
 # Import LangChain and utility modules
+from langchain.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
@@ -79,13 +80,11 @@ def load_pdf():
         if new_pdfs:
             for pdf in new_pdfs:
                 print(f"Loading new PDF: {pdf}")
-                pdf_loader = UnstructuredPDFLoader(
-                    file_path=os.path.join(PDF_FOLDER, pdf),
-                    mode = "elements",
-                    unstructured_kwargs={"strategy": "fast"},
-                )
+                file_path=os.path.join(PDF_FOLDER, pdf)
+                pdf_loader = PyPDFLoader(file_path)
                 document = pdf_loader.load()
                 documents.append(document)
+        save_metadata(METADATA_PATH, current_metadata)
         changes = True
         return changes, current_metadata, documents
     else:
@@ -131,7 +130,7 @@ def _build_rag_chain(
                
         vector_store.add_documents(documents=doc_chunks)
         # Save updated metadata so we know which PDFs are already processed
-        save_metadata(METADATA_PATH, current_metadata)
+        
         print("[✓] Chunks embedded and stored in vector database.")
     elif not changes:
         # If no changes, just load the existing vectorstore
