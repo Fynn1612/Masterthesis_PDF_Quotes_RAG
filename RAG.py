@@ -81,7 +81,7 @@ def load_pdf():
             for pdf in new_pdfs:
                 print(f"Loading new PDF: {pdf}")
                 file_path=os.path.join(PDF_FOLDER, pdf)
-                pdf_loader = PyPDFLoader(file_path)
+                pdf_loader = PyPDFLoader(file_path) #add mode = "page" to load each page as a document
                 document = pdf_loader.load()
                 documents.append(document)
         save_metadata(METADATA_PATH, current_metadata)
