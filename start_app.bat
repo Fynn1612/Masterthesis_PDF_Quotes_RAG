@@ -1,5 +1,5 @@
 @echo off
-cd /d "C:\Users\Surface\Masterthesis_RAG"
-call venv\Scripts\activate
+cd /d "C:\Users\Surface\Masterarbeit_RAG\Masterthesis_PDF_Quotes_RAG"
+call .venv\Scripts\activate
 streamlit run RAG.py
-exit
+pause
