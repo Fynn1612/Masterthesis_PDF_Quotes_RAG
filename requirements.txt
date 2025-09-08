@@ -6,6 +6,7 @@ langchain-groq
 langchain-google-genai
 langchain-core
 langchain-ollama
+langchain_chroma
 langchain_text_splitters
 pypdf
 python-dotenv
