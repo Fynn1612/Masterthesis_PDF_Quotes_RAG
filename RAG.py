@@ -11,6 +11,8 @@ from langchain_core.runnables import RunnableMap
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+
 
 from utils.chat_history_handling import (
     format_chat_history,
@@ -33,6 +35,11 @@ PROJECT_NAME = "Masterarbeit_RAG_PDFs"
 GOOGLE_DRIVE_BASE = r"G:\Meine Ablage"
 llm_model_name = "gemini-2.5-flash"
 
+def get_embeddings():
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-base-en-v1.5"
+    )
+    return embeddings
 
 def get_embedding():
     """
@@ -103,7 +110,7 @@ def _build_rag_chain(
     Returns the complete RAG chain.
     """
     # Get embedding model (ensures event loop)
-    embedding = get_embedding()
+    embedding = get_embeddings()
 
     if changes:
         # If there are new/changed documents, split them into chunks and embed
