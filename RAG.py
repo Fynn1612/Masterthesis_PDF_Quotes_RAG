@@ -3,7 +3,6 @@ import os
 
 # Import LangChain and utility modules
 from langchain.document_loaders import PyPDFLoader
-from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain.prompts import PromptTemplate, ChatPromptTemplate
@@ -108,7 +107,12 @@ def _build_rag_chain(
 
     if changes:
         # If there are new/changed documents, split them into chunks and embed
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=300)
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=500,
+            length_function=len,
+            add_start_index=True,
+            )
         doc_chunks = []
         for d in documents:
             chunks = splitter.split_documents(d)

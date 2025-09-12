@@ -1,6 +1,0 @@
-[
-  {
-    "question": "What is epistmeic uncertainty?",
-    "answer": "Epistemic uncertainty refers to uncertainty due to the finite amount of training data or a lack of knowledge, often within the model parameters. This type of uncertainty can, in principle, be reduced by collecting more training data or additional information. High epistemic uncertainty implies that the model's knowledge is limited.\n\nSources:\n*   dietterich-uncertainty-quantification-in-machine-learning-final.pdf, page 12\n*   Masterarbeit Detecting_Uncertainty.pdf, page 14\n*   Aleatoric and Epistemic Uncertainty in RF.pdf, page 1\n*   Uncertainty in Deep Learning Yarin Gal.pdf, page 7\n*   Bayesian neural networks for uncertainty quantification in.pdf, page 1\n*   A Structured Review of Literature on Uncertainty in Machine.pdf, page 15"
-  }
-]

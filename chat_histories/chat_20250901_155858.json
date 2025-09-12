@@ -1,6 +1,0 @@
-[
-  {
-    "question": "What is epistemic unucertainty",
-    "answer": "Epistemic uncertainty refers to a lack of knowledge about the process. It detects samples far from the training distribution and disappears when enough data is provided. This type of uncertainty can also be identified by training multiple models and observing where they disagree. More specifically, in a classification context, epistemic uncertainty can be high if class probabilities vary strongly within the set of plausible hypotheses, indicating uncertainty in comparing these probabilities, and can be 1 if both positive and negative classes appear plausible for two totally plausible hypotheses.\n\nSources:\n* uncertainty_slides.pdf, page 30\n* uncertainty_slides.pdf, page 32\n* uncertainty_slides.pdf, page 33\n* Aleatoric and Epistemic Uncertainty in RF.pdf, page 4"
-  }
-]

@@ -5,16 +5,14 @@ sentence-transformers
 langchain-groq
 langchain-google-genai
 langchain-core
-langchain-ollama
 langchain_chroma
 langchain_text_splitters
+langchain_huggingface
 pypdf
 python-dotenv
 streamlit
 elevenlabs
 fastembed
-ollama
 pdfplumber
-sentence-transformers
 unstructured
 unstructured[all-docs]

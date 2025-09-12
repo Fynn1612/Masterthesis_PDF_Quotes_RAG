@@ -1,6 +1,0 @@
-[
-  {
-    "question": "what is epistemic uncertainty",
-    "answer": "Epistemic uncertainty, also referred to as model uncertainty or systematic uncertainty, arises when the model is unsure of its knowledge about the distribution of data or the precise model generating the observed data. It implies a lack of knowledge about the appropriate weight values of the network or a deficiency in understanding, such as incomplete knowledge of underlying mechanisms or partial understanding of phenomena. This type of uncertainty is usually within the model parameters and can theoretically be reduced or eliminated by observing more data, careful collection of clean data, or acquiring additional knowledge, making it also known as reducible uncertainty. A common cause is out-of-distribution (OOD) data.\n\nSources:\n*   Controlled Dropout for Uncertainty Estimation.pdf, page 2\n*   Masterarbeit Detecting_Uncertainty.pdf, page 13\n*   Uncertainty quantification metrics for deep regression.pdf, page 92\n*   A survey on machine learning approaches for uncertainty quantification of engineering systems.pdf, page 1\n*   Masterthesis Uncertainty Quantification in Deep Learning.pdf, page 18"
-  }
-]
