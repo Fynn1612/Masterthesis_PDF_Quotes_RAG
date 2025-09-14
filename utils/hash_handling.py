@@ -4,7 +4,7 @@ import os
 # --------------------
 # CONFIG
 # --------------------
-HASH_STORE = "hash_store.json"
+HASH_STORE = r"G:\Meine Ablage\Masterarbeit_RAG_PDFs\hash_store.json"
 
 # --------------------
 # UTIL FUNKTIONEN
