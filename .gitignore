@@ -209,3 +209,4 @@ __marimo__/
 data/
 chroma/
 chat_histories/
+hash_store.json

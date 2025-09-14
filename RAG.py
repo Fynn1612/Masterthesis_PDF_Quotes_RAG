@@ -15,11 +15,15 @@ from langchain_community.document_loaders.pdf import PyPDFDirectoryLoader
 
 from utils.chat_history_handling import format_chat_history
 from utils.config import GOOGLE_API_KEY
+from utils.hash_handling import compute_md5, load_hashes, save_hashes
 
-# Define constants for file paths and configuration
+# --------------------
+# CONFIG
+# --------------------
 PDF_FOLDER = "G:/Meine Ablage/Masterarbeit_RAG_PDFs/PDFs"
 CHROMA_PATH = r"G:\Meine Ablage\Masterarbeit_RAG_PDFs\Vectorstores\huggingface\chroma_db"
-CHAT_HISTORY_DIR = "chat_histories"  # bleibt dein Standardordner
+CHAT_HISTORY_DIR = "chat_histories" 
+
 
 llm_model_name = "gemini-2.5-flash"
 
@@ -31,7 +35,8 @@ def get_embeddings():
         HuggingFaceEmbeddings: The embeddings model.
     """
     embeddings = HuggingFaceEmbeddings(
-        model_name="BAAI/bge-base-en-v1.5"
+        #model_name="BAAI/bge-base-en-v1.5"
+        model_name = "sentence-transformers/all-MiniLM-L6-v2"
     )
     return embeddings
 
@@ -117,23 +122,46 @@ def add_to_chroma(chunks: list[Document]):
     #calculate Page IDs.
     chunks_with_ids = calculate_chunk_ids(chunks)
     
-    # Add or Update the documents
-    existing_items = db.get(include=[])  # IDs are always included by default
-    existing_ids = set(existing_items["ids"])
-    print(f"Number of existing documents in DB: {len(existing_ids)}")
+    # load stored hashes
+    stored_hashes = load_hashes()
+    new_hashes = {}
+    
+    # # Add or Update the documents
+    # existing_items = db.get(include=[])  # IDs are always included by default
+    # existing_ids = set(existing_items["ids"])
+    # print(f"Number of existing documents in DB: {len(existing_ids)}")
 
-    # Only add documents that don't exist in the DB.
+    # # Only add documents that don't exist in the DB.
+    # new_chunks = []
+    # for chunk in chunks_with_ids:
+    #     if chunk.metadata["id"] not in existing_ids:
+    #         new_chunks.append(chunk)
+            
+    # if len(new_chunks):
+    #     print(f"👉 Adding new documents: {len(new_chunks)}")
+    #     new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
+    #     db.add_documents(new_chunks, ids=new_chunk_ids)
+    # else:
+    #     print("✅ No new documents to add")
+    
     new_chunks = []
     for chunk in chunks_with_ids:
-        if chunk.metadata["id"] not in existing_ids:
+        source = chunk.metadata.get("source")
+        filepath = os.path.join(PDF_FOLDER, os.path.basename(source))
+        file_hash = compute_md5(filepath)
+        new_hashes[os.path.basename(source)] = file_hash
+
+        if stored_hashes.get(os.path.basename(source)) != file_hash:
             new_chunks.append(chunk)
-            
-    if len(new_chunks):
+
+    if new_chunks:
         print(f"👉 Adding new documents: {len(new_chunks)}")
-        new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
-        db.add_documents(new_chunks, ids=new_chunk_ids)
+        db.add_documents(new_chunks, ids=[c.metadata["id"] for c in new_chunks])
     else:
         print("✅ No new documents to add")
+    
+    # Save updated hashes
+    save_hashes(new_hashes)
 
 def format_docs(docs):
     """Format documents for context in the prompt.
