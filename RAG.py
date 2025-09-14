@@ -126,24 +126,6 @@ def add_to_chroma(chunks: list[Document]):
     stored_hashes = load_hashes()
     new_hashes = {}
     
-    # # Add or Update the documents
-    # existing_items = db.get(include=[])  # IDs are always included by default
-    # existing_ids = set(existing_items["ids"])
-    # print(f"Number of existing documents in DB: {len(existing_ids)}")
-
-    # # Only add documents that don't exist in the DB.
-    # new_chunks = []
-    # for chunk in chunks_with_ids:
-    #     if chunk.metadata["id"] not in existing_ids:
-    #         new_chunks.append(chunk)
-            
-    # if len(new_chunks):
-    #     print(f"👉 Adding new documents: {len(new_chunks)}")
-    #     new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
-    #     db.add_documents(new_chunks, ids=new_chunk_ids)
-    # else:
-    #     print("✅ No new documents to add")
-    
     new_chunks = []
     for chunk in chunks_with_ids:
         source = chunk.metadata.get("source")
@@ -258,15 +240,29 @@ def main():
                 json.dump(st.session_state.chat_history, f, ensure_ascii=False, indent=4)
             st.success(f"Chatverlauf als {filename} exportiert!")
         
-    # Load PDFs and check for changes
-    documents = load_documents()
-    print(f"Loaded {len(documents)} documents from {PDF_FOLDER}")
+    # -------------------------------
+    # Load only new or changed PDFs
+    # -------------------------------
+    if "pdfs_loaded" not in st.session_state:
+        all_documents = load_documents()
+        stored_hashes = load_hashes()
+        documents_to_process = []
 
-    chunks = split_documents(documents)
-    print(f"Split into {len(chunks)} chunks.")
-    
-    add_to_chroma(chunks)
-    print("Chroma vector store is ready.")
+        for doc in all_documents:
+            source = doc.metadata.get("source")
+            filepath = os.path.join(PDF_FOLDER, os.path.basename(source))
+            file_hash = compute_md5(filepath)
+            if stored_hashes.get(os.path.basename(source)) != file_hash:
+                documents_to_process.append(doc)
+
+        if documents_to_process:
+            chunks = split_documents(documents_to_process)  # split only new/changed docs
+            add_to_chroma(chunks)                           # add/update Chroma
+            st.session_state.pdfs_loaded = True
+            print(f"Processed {len(documents_to_process)} new/changed PDFs and added {len(chunks)} chunks.")
+        else:
+            st.session_state.pdfs_loaded = True
+            print("✅ No new or changed PDFs detected.")
     
     # Build the RAG chain (retriever + LLM)
     rag_chain = _build_rag_chain(
