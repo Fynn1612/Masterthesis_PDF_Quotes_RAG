@@ -1,8 +1,7 @@
-import streamlit as st
+import json
 import os
-
-# Import LangChain and utility modules
-from langchain.document_loaders import PyPDFLoader
+from datetime import datetime
+import streamlit as st
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain.prompts import PromptTemplate, ChatPromptTemplate
@@ -10,100 +9,144 @@ from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_core.runnables import RunnableMap
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.schema import Document
+from langchain_community.document_loaders.pdf import PyPDFDirectoryLoader
 
-
-from utils.chat_history_handling import (
-    format_chat_history,
-    save_chat_history,
-    list_chat_histories,
-    load_chat_history,
-)
-from utils.meta_data_handling import (
-    get_pdf_metadata,
-    load_stored_metadata,
-    save_metadata,
-)
+from utils.chat_history_handling import format_chat_history
 from utils.config import GOOGLE_API_KEY
 
 # Define constants for file paths and configuration
 PDF_FOLDER = "G:/Meine Ablage/Masterarbeit_RAG_PDFs/PDFs"
-METADATA_PATH = "G:/Meine Ablage/Masterarbeit_RAG_PDFs/pdf_metadata.json"
-CHAT_HISTORY_DIR = "chat_histories"
-PROJECT_NAME = "Masterarbeit_RAG_PDFs"
-GOOGLE_DRIVE_BASE = r"G:\Meine Ablage"
+CHROMA_PATH = r"G:\Meine Ablage\Masterarbeit_RAG_PDFs\Vectorstores\huggingface\chroma_db"
+CHAT_HISTORY_DIR = "chat_histories"  # bleibt dein Standardordner
+
 llm_model_name = "gemini-2.5-flash"
 
+@st.cache_resource
 def get_embeddings():
+    """Get embeddings for text documents.
+
+    Returns:
+        HuggingFaceEmbeddings: The embeddings model.
+    """
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-base-en-v1.5"
     )
     return embeddings
 
-def get_embedding():
-    """
-    Ensure an event loop exists and return the Google Generative AI Embedding model.
-    This is needed because the embedding model uses async code and Streamlit runs in its own thread.
-    """
-    import asyncio
+def load_documents():
+    """Load PDF documents from the specified folder.
+    Each Document/Page has a page_content and metadata including source and page number.
 
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001", google_api_key=GOOGLE_API_KEY
+    Returns:
+        list[Document]: A list of loaded PDF documents. Each entry of the list is one page of one document.
+    """
+    loader = PyPDFDirectoryLoader(PDF_FOLDER)
+    documents = loader.load()
+    return documents
+
+def split_documents(documents: list[Document]):
+    """Split documents/pages into smaller chunks for processing.
+    Each chunks has a page_content and metadata including source, page number and a page_label if 
+    one page is split into several pages.
+
+    Args:
+        documents (list[Document]): A list of documents to split.
+
+    Returns:
+        list[Document]: A list of document chunks.
+    """
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100,
+        length_function=len,
+        is_separator_regex=False
+    )
+    split_docs = text_splitter.split_documents(documents)
+    return split_docs
+
+def calculate_chunk_ids(chunks):
+    """
+    Calculate unique IDs for each document chunk based on source, page number, and chunk index.
+    This will create IDs like "data/monopoly.pdf:6:2"
+    Source : Page Number : Chunk Index
+    
+    Args:
+        chunks (list[Document]): A list of document chunks.
+    
+    Returns:
+        list[Document]: The list of document chunks with updated metadata including unique IDs.
+    """
+    last_page_id = None
+    current_chunk_index = 0
+
+    for chunk in chunks:
+        source = chunk.metadata.get("source")
+        page = chunk.metadata.get("page")
+        current_page_id = f"{source}:{page}"
+
+        # If the page ID is the same as the last one, increment the index.
+        if current_page_id == last_page_id:
+            current_chunk_index += 1
+        else:
+            current_chunk_index = 0
+
+        # Calculate the chunk ID.
+        chunk_id = f"{current_page_id}:{current_chunk_index}"
+        last_page_id = current_page_id
+
+        # Add it to the page meta-data.
+        chunk.metadata["id"] = chunk_id
+
+    return chunks
+
+def add_to_chroma(chunks: list[Document]):
+    """Add document chunks to the Chroma vector store.
+    
+
+    Args:
+        chunks (list[Document]): A list of document chunks to add.
+    """
+    # Load the existing Chroma DB.
+    db = Chroma(
+        persist_directory = CHROMA_PATH,
+        embedding_function = get_embeddings(),
+    )
+    
+    #calculate Page IDs.
+    chunks_with_ids = calculate_chunk_ids(chunks)
+    
+    # Add or Update the documents
+    existing_items = db.get(include=[])  # IDs are always included by default
+    existing_ids = set(existing_items["ids"])
+    print(f"Number of existing documents in DB: {len(existing_ids)}")
+
+    # Only add documents that don't exist in the DB.
+    new_chunks = []
+    for chunk in chunks_with_ids:
+        if chunk.metadata["id"] not in existing_ids:
+            new_chunks.append(chunk)
+            
+    if len(new_chunks):
+        print(f"👉 Adding new documents: {len(new_chunks)}")
+        new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
+        db.add_documents(new_chunks, ids=new_chunk_ids)
+    else:
+        print("✅ No new documents to add")
+
+def format_docs(docs):
+    """Format documents for context in the prompt.
+    Each document is formatted with its source and page number."""
+    
+    return "\n\n".join(
+        f"Quelle: {doc.metadata.get('source', 'unbekannt')} (Seite {doc.metadata.get('page', '?')})\n"
+        f"{doc.page_content}"
+        for doc in docs
     )
 
-
 @st.cache_resource
-def load_pdf():
-    """
-    Loads PDF documents from the specified folder and checks for new or updated files.
-    Only new or changed PDFs are loaded and processed.
-    Returns:
-        changes (bool): Whether there are new/changed PDFs.
-        current_metadata (dict): Metadata of all PDFs in the folder.
-        documents (list): List of loaded documents (if any new/changed).
-    """
-    current_metadata = get_pdf_metadata(PDF_FOLDER)
-    stored_metadata = load_stored_metadata(METADATA_PATH)
-
-    if current_metadata != stored_metadata:
-        print("[✓] New metadata found.")
-        documents = []
-        new_pdfs = []
-        # Identify new or changed PDFs by comparing metadata
-        for file_name, last_modified in current_metadata.items():
-            if file_name not in stored_metadata:
-                new_pdfs.append(file_name)
-            elif last_modified != stored_metadata[file_name]:
-                new_pdfs.append(file_name)
-                print(f"[✓] New PDF found: {file_name}")
-        # Load only new/changed PDFs
-        if new_pdfs:
-            for pdf in new_pdfs:
-                print(f"Loading new PDF: {pdf}")
-                file_path=os.path.join(PDF_FOLDER, pdf)
-                pdf_loader = PyPDFLoader(file_path,
-                                         mode="page") #add mode = "page" to load each page as a document
-                document = pdf_loader.load()
-                documents.append(document)
-        save_metadata(METADATA_PATH, current_metadata)
-        changes = True
-        return changes, current_metadata, documents
-    else:
-        # No changes, so no need to reload documents
-        changes = False
-        return changes, current_metadata, None
-
-
-@st.cache_resource
-def _build_rag_chain(
-    documents, llm_model_name=llm_model_name, changes=False, current_metadata=None
-):
+def _build_rag_chain(llm_model_name=llm_model_name):
     """
     Builds the RAG (Retrieval-Augmented Generation) chain for answering questions based on PDF content.
     If there are new/changed documents, splits and embeds them, otherwise loads the existing vectorstore.
@@ -111,49 +154,11 @@ def _build_rag_chain(
     """
     # Get embedding model (ensures event loop)
     embedding = get_embeddings()
-
-    if changes:
-        # If there are new/changed documents, split them into chunks and embed
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, 
-            chunk_overlap=500,
-            length_function=len,
-            add_start_index=True,
-            )
-        doc_chunks = []
-        for d in documents:
-            chunks = splitter.split_documents(d)
-            for chunk in chunks:
-                print(chunk.metadata["source"])
-            doc_chunks.extend(chunks)
-        print(f"[✓] Document split into {len(doc_chunks)} chunks.")
-
-        print("Pulling embedding model...")
-        # Define persistent path for the vectorstore
-        persist_path = os.path.join(
-            GOOGLE_DRIVE_BASE, PROJECT_NAME, "Vectorstores", "gemini", "chroma_db"
-        )
-        os.makedirs(persist_path, exist_ok=True)
-        # Create new vectorstore and add new chunks
-        vector_store = Chroma(
-            embedding_function=embedding,
-            persist_directory=persist_path,
-        )
-               
-        vector_store.add_documents(documents=doc_chunks)
-        # Save updated metadata so we know which PDFs are already processed
-        
-        print("[✓] Chunks embedded and stored in vector database.")
-    elif not changes:
-        # If no changes, just load the existing vectorstore
-        persist_path = os.path.join(
-            GOOGLE_DRIVE_BASE, PROJECT_NAME, "Vectorstores", "gemini", "chroma_db"
-        )
-        vector_store = Chroma(
-            embedding_function=embedding,
-            persist_directory=persist_path,
-        )
-
+    # Load the vector store (Chroma)
+    vector_store = Chroma(
+        persist_directory=CHROMA_PATH,
+        embedding_function=embedding,
+    )
     # Load the LLM (Google Gemini)
     llm = ChatGoogleGenerativeAI(model=llm_model_name, api_key=GOOGLE_API_KEY)
 
@@ -161,7 +166,7 @@ def _build_rag_chain(
     multi_query_prompt = PromptTemplate(
         input_variables=["question"],
         template=(
-            "You are an AI assistant. Generate 10 different versions of the user question "
+            "You are a scientific AI assistant. Generate 5 different versions of the user question "
             "to improve document retrieval from a vector database.\n"
             "Original question: {question}"
         ),
@@ -188,7 +193,7 @@ def _build_rag_chain(
     rag_chain = (
         RunnableMap(
             {
-                "context": retriever,
+                "context": retriever | format_docs,
                 "question": lambda x: x["question"],
                 "chat_history": lambda x: x["chat_history"],
             }
@@ -200,46 +205,46 @@ def _build_rag_chain(
 
     return rag_chain
 
-
 def main():
     # Set up Streamlit page
     st.set_page_config(page_title="Masterthesis Literature Chatbot", layout="centered")
     st.title("Masterthesis Literature Chatbot")
     st.caption("Chat with multiple PDFs :books:")
+    
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
-    # Sidebar: List and load old chat histories
+    # Sidebar: optinal export of chat history
     with st.sidebar:
-        st.markdown("### 💬 Alte Chats")
-        chat_files = list_chat_histories(CHAT_HISTORY_DIR)
-        selected_chat = st.selectbox(
-            "Wähle einen Chatverlauf", ["Neuer Chat"] + chat_files
-        )
-        if selected_chat != "Neuer Chat":
-            # Load selected chat history into session state
-            st.session_state.chat_history = load_chat_history(
-                selected_chat, CHAT_HISTORY_DIR
-            )
-            st.success(f"Chat {selected_chat} geladen!")
-
-    # Sidebar: Button to manually save current chat history
-    with st.sidebar:
-        if st.button("Chatverlauf speichern"):
-            save_chat_history(st.session_state.chat_history, CHAT_HISTORY_DIR)
-            st.success("Chatverlauf gespeichert!")
-
+        st.markdown("### 💾 Chatverlauf exportieren")
+        
+        if st.button("Chat exportieren"):
+            os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)  # create folder if not exists
+            
+            # Filename with timestamp and path
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"chat_{timestamp}.json"
+            path = os.path.join(CHAT_HISTORY_DIR, filename)
+            
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(st.session_state.chat_history, f, ensure_ascii=False, indent=4)
+            st.success(f"Chatverlauf als {filename} exportiert!")
+        
     # Load PDFs and check for changes
-    changes, current_metadata, documents = load_pdf()
-    if not documents:
-        st.info("No new or updated PDFs found. Using existing vectorstore.")
+    documents = load_documents()
+    print(f"Loaded {len(documents)} documents from {PDF_FOLDER}")
 
+    chunks = split_documents(documents)
+    print(f"Split into {len(chunks)} chunks.")
+    
+    add_to_chroma(chunks)
+    print("Chroma vector store is ready.")
+    
     # Build the RAG chain (retriever + LLM)
     rag_chain = _build_rag_chain(
-        documents,
         llm_model_name=llm_model_name,
-        changes=changes,
-        current_metadata=current_metadata,
     )
-
+    print("RAG chain is ready.")
     # Initialize chat history in session state if not present
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
@@ -275,10 +280,9 @@ def main():
                 st.session_state.chat_history.append(
                     {"question": question, "answer": response}
                 )
-                save_chat_history(st.session_state.chat_history, CHAT_HISTORY_DIR)
+                # save_chat_history(st.session_state.chat_history, CHAT_HISTORY_DIR)
             except Exception as e:
                 st.error(f"Error processing your question: {e}")
-
 
 if __name__ == "__main__":
     main()
