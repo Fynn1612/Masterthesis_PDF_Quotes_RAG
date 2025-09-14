@@ -265,12 +265,10 @@ def main():
 
 
         if documents_to_process:
-            st.write(f"{len(documents_to_process)} PDFs sind neu/changed. Splitting into chunks…")
+            st.write(f"{len(documents_to_process)} PDFs are new/changed. Splitting into chunks…")
             chunks = split_documents(documents_to_process)  # split only new/changed docs
             
             st.write("Adding embeddings to Chroma…")
-            chunks_total = len(chunks)
-            embed_progress = st.progress(0)
             add_to_chroma(chunks)
             st.success(f"Processed {len(documents_to_process)} new/changed PDFs and added {len(chunks)} chunks.")
         else:
