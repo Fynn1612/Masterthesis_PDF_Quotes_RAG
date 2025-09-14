@@ -271,20 +271,18 @@ def main():
             st.write("Adding embeddings to Chroma…")
             chunks_total = len(chunks)
             embed_progress = st.progress(0)
-            for j, chunk in enumerate(chunks):
-                add_to_chroma([chunk])  # add one chunk at a time
-                embed_progress.progress((j + 1) / chunks_total)
-
-            print(f"Processed {len(documents_to_process)} new/changed PDFs and added {len(chunks)} chunks.")
+            add_to_chroma(chunks)
+            st.success(f"Processed {len(documents_to_process)} new/changed PDFs and added {len(chunks)} chunks.")
         else:
             
-            print("✅ No new or changed PDFs detected.")
+            st.success("✅ No new or changed PDFs detected.")
         st.session_state.pdfs_loaded = True
     
-    # Build the RAG chain (retriever + LLM)
-    rag_chain = _build_rag_chain(
-        llm_model_name=llm_model_name,
-    )
+    if "rag_chain" not in st.session_state:
+        st.session_state.rag_chain = _build_rag_chain(llm_model_name=llm_model_name)
+        st.success("RAG chain is ready.")
+
+    rag_chain = st.session_state.rag_chain
     print("RAG chain is ready.")
     # Initialize chat history in session state if not present
     if "chat_history" not in st.session_state:
