@@ -106,7 +106,7 @@ def calculate_chunk_ids(chunks):
 
     return chunks
 
-def add_to_chroma(chunks: list[Document]):
+def add_to_chroma(chunks: list[Document], batch_size: int = 5000):
     """Add document chunks to the Chroma vector store.
     
 
@@ -125,7 +125,7 @@ def add_to_chroma(chunks: list[Document]):
     # load stored hashes
     stored_hashes = load_hashes()
     new_hashes = {}
-    
+        
     new_chunks = []
     for chunk in chunks_with_ids:
         source = chunk.metadata.get("source")
@@ -136,14 +136,26 @@ def add_to_chroma(chunks: list[Document]):
         if stored_hashes.get(os.path.basename(source)) != file_hash:
             new_chunks.append(chunk)
 
-    if new_chunks:
-        print(f"👉 Adding new documents: {len(new_chunks)}")
-        db.add_documents(new_chunks, ids=[c.metadata["id"] for c in new_chunks])
-    else:
+    if not new_chunks:
         print("✅ No new documents to add")
+        return
     
+    print(f"👉 Adding new documents: {len(new_chunks)}")
+
+    # Progress-Bar in Streamlit
+    progress_bar = st.progress(0)
+    total = len(new_chunks)
+
+    for i in range(0, total, batch_size):
+        batch = new_chunks[i : i + batch_size]
+        db.add_documents(batch, ids=[c.metadata["id"] for c in batch])
+
+        # Update Fortschritt
+        progress_bar.progress(min((i + batch_size) / total, 1.0))
+
     # Save updated hashes
     save_hashes(new_hashes)
+    print("✅ All new documents added successfully!")
 
 def format_docs(docs):
     """Format documents for context in the prompt.
