@@ -35,8 +35,8 @@ def get_embeddings():
         HuggingFaceEmbeddings: The embeddings model.
     """
     embeddings = HuggingFaceEmbeddings(
-        #model_name="BAAI/bge-base-en-v1.5"
-        model_name = "sentence-transformers/all-MiniLM-L6-v2"
+        model_name="BAAI/bge-base-en-v1.5"
+        #model_name = "sentence-transformers/all-MiniLM-L6-v2"
     )
     return embeddings
 
