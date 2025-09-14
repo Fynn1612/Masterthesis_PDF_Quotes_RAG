@@ -244,25 +244,42 @@ def main():
     # Load only new or changed PDFs
     # -------------------------------
     if "pdfs_loaded" not in st.session_state:
+        st.session_state.pdfs_loaded = False
+        
+    if not st.session_state.pdfs_loaded:
         all_documents = load_documents()
+        st.write(f"Loaded {len(all_documents)} PDFs. Processing…")
+        
+        progress_bar = st.progress(0)
+        
         stored_hashes = load_hashes()
         documents_to_process = []
 
-        for doc in all_documents:
+        for i, doc in enumerate(all_documents):
             source = doc.metadata.get("source")
             filepath = os.path.join(PDF_FOLDER, os.path.basename(source))
             file_hash = compute_md5(filepath)
             if stored_hashes.get(os.path.basename(source)) != file_hash:
                 documents_to_process.append(doc)
+            progress_bar.progress((i + 1) / len(all_documents))
+
 
         if documents_to_process:
+            st.write(f"{len(documents_to_process)} PDFs sind neu/changed. Splitting into chunks…")
             chunks = split_documents(documents_to_process)  # split only new/changed docs
-            add_to_chroma(chunks)                           # add/update Chroma
-            st.session_state.pdfs_loaded = True
+            
+            st.write("Adding embeddings to Chroma…")
+            chunks_total = len(chunks)
+            embed_progress = st.progress(0)
+            for j, chunk in enumerate(chunks):
+                add_to_chroma([chunk])  # add one chunk at a time
+                embed_progress.progress((j + 1) / chunks_total)
+
             print(f"Processed {len(documents_to_process)} new/changed PDFs and added {len(chunks)} chunks.")
         else:
-            st.session_state.pdfs_loaded = True
+            
             print("✅ No new or changed PDFs detected.")
+        st.session_state.pdfs_loaded = True
     
     # Build the RAG chain (retriever + LLM)
     rag_chain = _build_rag_chain(
