@@ -12,6 +12,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain_community.document_loaders.pdf import PyPDFDirectoryLoader
+from langchain_community.document_loaders import PyPDFLoader
 
 from utils.chat_history_handling import format_chat_history
 from utils.config import GOOGLE_API_KEY
@@ -40,16 +41,31 @@ def get_embeddings():
     )
     return embeddings
 
-def load_documents():
-    """Load PDF documents from the specified folder.
-    Each Document/Page has a page_content and metadata including source and page number.
+def scan_pdf_hashes(pdf_folder: str):
+    """Scan the PDF folder for new or changed files by comparing MD5 hashes.
 
+    Args:
+        pdf_folder (str): The folder containing PDF files.
+        
     Returns:
-        list[Document]: A list of loaded PDF documents. Each entry of the list is one page of one document.
+        tuple: A tuple containing a list of changed file paths and a dictionary of new hashes.
     """
-    loader = PyPDFDirectoryLoader(PDF_FOLDER)
-    documents = loader.load()
-    return documents
+    stored_hashes = load_hashes()
+    new_hashes = {}
+    
+    changed_files = []
+
+    for filename in os.listdir(pdf_folder):
+        if filename.lower().endswith(".pdf"):
+            filepath = os.path.join(pdf_folder, filename)
+            file_hash = compute_md5(filepath)
+            new_hashes[filename] = file_hash
+
+            # Prüfen ob neu/anders
+            if stored_hashes.get(filename) != file_hash:
+                changed_files.append(filepath)
+
+    return changed_files, new_hashes
 
 def split_documents(documents: list[Document]):
     """Split documents/pages into smaller chunks for processing.
@@ -121,40 +137,26 @@ def add_to_chroma(chunks: list[Document], batch_size: int = 5000):
     
     #calculate Page IDs.
     chunks_with_ids = calculate_chunk_ids(chunks)
-    
-    # load stored hashes
-    stored_hashes = load_hashes()
-    new_hashes = {}
-        
-    new_chunks = []
-    for chunk in chunks_with_ids:
-        source = chunk.metadata.get("source")
-        filepath = os.path.join(PDF_FOLDER, os.path.basename(source))
-        file_hash = compute_md5(filepath)
-        new_hashes[os.path.basename(source)] = file_hash
 
-        if stored_hashes.get(os.path.basename(source)) != file_hash:
-            new_chunks.append(chunk)
-
-    if not new_chunks:
+    if not chunks_with_ids:
         print("✅ No new documents to add")
         return
-    
-    print(f"👉 Adding new documents: {len(new_chunks)}")
+
+    print(f"👉 Adding new documents: {len(chunks_with_ids)}")
 
     # Progress-Bar in Streamlit
     progress_bar = st.progress(0)
-    total = len(new_chunks)
+    total = len(chunks_with_ids)
 
     for i in range(0, total, batch_size):
-        batch = new_chunks[i : i + batch_size]
+        batch = chunks_with_ids[i : i + batch_size]
         db.add_documents(batch, ids=[c.metadata["id"] for c in batch])
 
         # Update Fortschritt
         progress_bar.progress(min((i + batch_size) / total, 1.0))
 
     # Save updated hashes
-    save_hashes(new_hashes)
+    #save_hashes(new_hashes)
     print("✅ All new documents added successfully!")
 
 def format_docs(docs):
@@ -259,30 +261,27 @@ def main():
         st.session_state.pdfs_loaded = False
         
     if not st.session_state.pdfs_loaded:
-        all_documents = load_documents()
-        st.write(f"Loaded {len(all_documents)} PDFs. Processing…")
+
+        st.write("Scanning PDF folder for new or changed files…")
+        changed_files, new_hashes = scan_pdf_hashes(PDF_FOLDER)
         
-        progress_bar = st.progress(0)
-        
-        stored_hashes = load_hashes()
-        documents_to_process = []
+        if changed_files:
+            documents_to_process = []
+            progress_bar = st.progress(0)
 
-        for i, doc in enumerate(all_documents):
-            source = doc.metadata.get("source")
-            filepath = os.path.join(PDF_FOLDER, os.path.basename(source))
-            file_hash = compute_md5(filepath)
-            if stored_hashes.get(os.path.basename(source)) != file_hash:
-                documents_to_process.append(doc)
-            progress_bar.progress((i + 1) / len(all_documents))
-
-
-        if documents_to_process:
-            st.write(f"{len(documents_to_process)} PDFs are new/changed. Splitting into chunks…")
-            chunks = split_documents(documents_to_process)  # split only new/changed docs
+            # Load only the changed files
+            for i, filepath in enumerate(changed_files):
+                loader = PyPDFLoader(filepath, mode="page")
+                docs = loader.load()
+                documents_to_process.extend(docs)          
             
+                progress_bar.progress((i + 1) / len(changed_files))
+            
+            chunks = split_documents(documents_to_process)
             st.write("Adding embeddings to Chroma…")
             add_to_chroma(chunks)
             st.success(f"Processed {len(documents_to_process)} new/changed PDFs and added {len(chunks)} chunks.")
+            save_hashes(new_hashes)
         else:
             
             st.success("✅ No new or changed PDFs detected.")

@@ -4,7 +4,7 @@ from langchain.schema import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
-DATA_PATH = "data"
+DATA_PATH = r"G:\Meine Ablage\Masterarbeit_RAG_PDFs\PDFs"
 CHROMA_PATH = "chroma"
 
 def load_documents():
